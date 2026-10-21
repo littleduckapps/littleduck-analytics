@@ -1,0 +1,21 @@
+name: littleduck_analytics
+description: "Little Duck's one analytics door: anonymous usage counting through Aptabase, with the rules built in."
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.10.0
+  flutter: ">=3.38.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  aptabase_flutter: ^0.5.0
+  shared_preferences: ^2.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
