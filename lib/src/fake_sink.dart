@@ -3,10 +3,10 @@ import 'sink.dart';
 /// One recorded `init` call.
 class FakeInit {
   /// Creates a record of an `init` call.
-  const FakeInit(this.appKey, this.host);
+  const FakeInit(this.token, this.host);
 
-  /// The app key the sink was initialised with.
-  final String appKey;
+  /// The project token the sink was initialised with.
+  final String token;
 
   /// The host passed, if any.
   final String? host;
@@ -36,8 +36,16 @@ class FakeSink implements AnalyticsSink {
   final List<FakeEvent> events = [];
 
   @override
-  Future<void> init(String appKey, {String? host}) async {
-    inits.add(FakeInit(appKey, host));
+  Future<void> init(String token, {String? host}) async {
+    inits.add(FakeInit(token, host));
+  }
+
+  /// Every `setEnabled` call, in order.
+  final List<bool> switches = [];
+
+  @override
+  Future<void> setEnabled(bool value) async {
+    switches.add(value);
   }
 
   @override

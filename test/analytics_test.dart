@@ -9,8 +9,17 @@ void main() {
   late List<String> printed;
   late DebugPrintCallback originalDebugPrint;
 
-  Future<void> start({bool? enabled}) =>
-      Analytics.init(appKey: 'A-EU-0000000000', enabled: enabled, sink: sink);
+  Future<void> start({bool? enabled}) => Analytics.init(
+    token: 'phc_test',
+    app: 'test-app',
+    channel: '',
+    build: '',
+    enabled: enabled,
+    sink: sink,
+  );
+
+  /// What every event carries besides its own properties.
+  const labels = {'app': 'test-app', 'channel': 'store'};
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -31,21 +40,22 @@ void main() {
   });
 
   group('init', () {
-    test('initialises the sink with the app key and host', () async {
+    test('initialises the sink with the token and host', () async {
       await Analytics.init(
-        appKey: 'A-EU-0000000000',
+        token: 'phc_test',
+        app: 'test-app',
         sink: sink,
-        host: 'https://aptabase.example',
+        host: 'https://posthog.example',
       );
       expect(sink.inits, hasLength(1));
-      expect(sink.inits.single.appKey, 'A-EU-0000000000');
-      expect(sink.inits.single.host, 'https://aptabase.example');
+      expect(sink.inits.single.token, 'phc_test');
+      expect(sink.inits.single.host, 'https://posthog.example');
     });
 
     test('a second init keeps the first sink', () async {
       await start();
       final other = FakeSink();
-      await Analytics.init(appKey: 'A-EU-0000000000', sink: other);
+      await Analytics.init(token: 'phc_test', app: 'test-app', sink: other);
       Analytics.track('level_won');
       expect(sink.eventNames, ['level_won']);
       expect(other.events, isEmpty);
@@ -64,6 +74,7 @@ void main() {
       expect(sink.events, hasLength(1));
       expect(sink.events.single.name, 'level_won');
       expect(sink.events.single.props, {
+        ...labels,
         'level': 12,
         'first_try': true,
         'install_age': 'd1_3',
@@ -74,7 +85,7 @@ void main() {
     test('an event with no props sends an empty map', () async {
       await start();
       Analytics.track('settings_opened');
-      expect(sink.events.single.props, isEmpty);
+      expect(sink.events.single.props, labels);
     });
 
     test('a free-text property is dropped in release mode', () async {
@@ -84,7 +95,7 @@ void main() {
         'results': 'some',
       });
       expect(sink.events, hasLength(1));
-      expect(sink.events.single.props, {'results': 'some'});
+      expect(sink.events.single.props, {...labels, 'results': 'some'});
       expect(printed, hasLength(1));
       expect(printed.single, contains('typed'));
     });
@@ -145,7 +156,7 @@ void main() {
         'lng': 2,
         'people': 4,
       });
-      expect(sink.events.single.props, {'people': 4});
+      expect(sink.events.single.props, {...labels, 'people': 4});
       expect(printed, hasLength(16));
     });
 
@@ -162,7 +173,7 @@ void main() {
         'long': 'abcdefghijklmnopqrstuvwxyz0123456789',
         'ok': 'abc-1.2_x',
       });
-      expect(sink.events.single.props, {'ok': 'abc-1.2_x'});
+      expect(sink.events.single.props, {...labels, 'ok': 'abc-1.2_x'});
     });
 
     test('validation still runs in debug when the switch is off', () async {
@@ -220,6 +231,86 @@ void main() {
       expect(await Analytics.readSwitch(), isTrue);
       await start();
       expect(Analytics.isEnabled, isTrue);
+    });
+
+    test('reaches the sink, so PostHog stops sending on its own too', () async {
+      await start();
+      await Analytics.setEnabled(false);
+      await Analytics.setEnabled(true);
+      expect(sink.switches, [false, true]);
+    });
+
+    test('a persisted off reaches the sink at init', () async {
+      SharedPreferences.setMockInitialValues({
+        Analytics.prefsEnabledKey: false,
+      });
+      await start();
+      expect(sink.switches, [false]);
+    });
+  });
+
+  group('consent first', () {
+    test('in the EU, the EEA and the UK, and where the country is unknown', () {
+      for (final country in ['DE', 'fr', 'IE', 'NO', 'GB', null, '']) {
+        expect(Analytics.consentFirst(country), isTrue, reason: '$country');
+      }
+      for (final country in ['AU', 'US', 'NZ', 'IN', 'CH']) {
+        expect(Analytics.consentFirst(country), isFalse, reason: country);
+      }
+    });
+
+    test('counting waits for a yes until the person answers', () async {
+      expect(await Analytics.hasAnswered(), isFalse);
+      await Analytics.init(
+        token: 'phc_test',
+        app: 'test-app',
+        whenUnset: !Analytics.consentFirst('DE'),
+        sink: sink,
+      );
+      Analytics.track('level_won');
+      expect(sink.events, isEmpty);
+      expect(await Analytics.readSwitch(whenUnset: false), isFalse);
+
+      await Analytics.setEnabled(true); // the yes
+      Analytics.track('level_won');
+      expect(sink.eventNames, ['level_won']);
+      expect(await Analytics.hasAnswered(), isTrue);
+    });
+  });
+
+  group('labels', () {
+    test("a test build's events say its channel and build", () async {
+      await Analytics.init(
+        token: 'phc_test',
+        app: 'even-split',
+        channel: 'qa',
+        build: 'e2-58bb4fb',
+        sink: sink,
+      );
+      Analytics.track('bill_split', {'people': '3_4'});
+      expect(sink.events.single.props, {
+        'people': '3_4',
+        'app': 'even-split',
+        'channel': 'qa',
+        'build': 'e2-58bb4fb',
+      });
+    });
+
+    test('a label the rules would refuse is a mistake at init', () async {
+      expect(
+        () => Analytics.init(token: 'phc_test', app: 'Even Split', sink: sink),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  group('no token', () {
+    test('a build without a token sends nothing and makes no sink', () async {
+      await Analytics.init(token: '', app: 'test-app', sink: sink);
+      Analytics.track('level_won');
+      expect(sink.inits, isEmpty);
+      expect(sink.events, isEmpty);
+      expect(Analytics.isInitialised, isFalse);
     });
   });
 

@@ -1,21 +1,49 @@
 # littleduck_analytics
 
 Little Duck's one analytics door: anonymous usage counting through
-[Aptabase](https://aptabase.com), with the rules built in.
+[PostHog](https://posthog.com) in its EU region, with the rules built in.
 
 Every Little Duck app counts how it is used through this package and nothing
-else. No app imports `aptabase_flutter` directly, so the SDK can be swapped in
-one file, and no app can send something the rules forbid, because the rules
+else. No app imports `posthog_flutter` directly, so the service can be swapped
+in one file, and no app can send something the rules forbid, because the rules
 run before anything leaves the phone.
 
 Copyright Little Duck Interactive Pty Ltd. Private; not for publishing.
 
 ## What gets sent
 
-Aptabase receives an event name, a time, a random session id that resets every
-launch and after an hour idle, the OS, the locale and the app version. That is
-all. No device id, no advertising id, no account, no user id, so there is no
-consent gate: the app offers an off switch in Settings instead.
+PostHog (EU) receives the app's own events, each with a time, the OS, the app
+version, the labels below, and a random install id the SDK keeps on the phone
+so a return visit counts as the same install. The install id is linked to no
+name, account, device id or advertising id, and no person profile is made.
+Everything else the SDK can capture by itself is off: session replay, screen
+views, app lifecycle events, exceptions, feature flags, surveys, push
+notifications.
+
+Every event carries three labels: `app` (the product key, e.g. `even-split`),
+`channel` (`store`, or the build's `LITTLEDUCK_CHANNEL`, e.g. `qa` for an
+epic's test build) and, in a test build, `build` (`LITTLEDUCK_BUILD`, e.g.
+`e2-58bb4fb`). The studio has one PostHog project for every app; the labels
+tell them apart, and `channel != qa` keeps test builds out of the real numbers.
+
+Storing an install id for counting needs consent in the EU, the EEA and the
+UK: there, counting starts off until the person says yes
+(`Analytics.consentFirst`). Elsewhere it starts on, with the off switch in
+Settings.
+
+## The build
+
+```sh
+flutter build apk --release \
+  --dart-define=POSTHOG_PROJECT_TOKEN=$POSTHOG_PROJECT_TOKEN \
+  --dart-define=LITTLEDUCK_CHANNEL=qa --dart-define=LITTLEDUCK_BUILD=e2-58bb4fb
+```
+
+A store build passes the token only. A build with no token (the emulator QA's)
+sends nothing. The app turns off the SDK's own start-up so the package decides
+everything: `com.posthog.posthog.AUTO_INIT` `false` as `<meta-data>` in
+`AndroidManifest.xml`'s `<application>`, and as a Boolean in iOS's
+`Info.plist`.
 
 ## The rules
 
@@ -35,7 +63,10 @@ consent gate: the app offers an off switch in Settings instead.
 5. **The off switch belongs in Settings.** `Analytics.setEnabled(false)`
    stops counting at once and is remembered for every later launch.
 6. **Debug builds send nothing.** Whatever the switch says, a `kDebugMode`
-   build never initialises the sink and never sends an event.
+   build never initialises the sink and never sends an event. Neither does a
+   build without a token.
+7. **Consent first in the EU, EEA and UK.** Until the person answers, the
+   switch reads `whenUnset`; their answer is `setEnabled`.
 
 What happens to a call that breaks a rule: in a debug build it throws
 `ArgumentError` with a plain message, so the mistake is found at the desk. In
@@ -50,7 +81,7 @@ Every phone app answers these three; the PRD adds the app's own on top.
 | --- | --- |
 | Did first run finish? | `first_run_finished` (with `first_run_started` to see the drop-off) |
 | Did they do the core thing? | one core action named for the app, e.g. `bill_split`, `level_won` |
-| Did they come back? | no event: retention comes from App Store Connect and Google Play |
+| Did they come back? | PostHog's retention, from the install id: no event of its own |
 
 ## Use
 
@@ -59,9 +90,18 @@ import 'package:littleduck_analytics/littleduck_analytics.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Analytics.init(appKey: 'A-EU-0000000000'); // reads the saved switch
+  final country = PlatformDispatcher.instance.locale.countryCode;
+  await Analytics.init(
+    token: const String.fromEnvironment('POSTHOG_PROJECT_TOKEN'),
+    app: 'even-split',
+    whenUnset: !Analytics.consentFirst(country), // reads the saved switch
+  );
   runApp(const App());
 }
+
+// The consent question, while `await Analytics.hasAnswered()` is false in a
+// consent-first country: "Yes" is `Analytics.setEnabled(true)`, "No"
+// `Analytics.setEnabled(false)`.
 
 // First run, exactly once per install:
 await Analytics.firstRunStarted();
@@ -84,8 +124,8 @@ Switch(
 ```
 
 `Analytics.init` reads the persisted switch when `enabled` is not given;
-`Analytics.readSwitch()` reads it on its own. Pass `host:` for a self-hosted
-Aptabase.
+`Analytics.readSwitch(whenUnset: ...)` reads it on its own. `channel` and
+`build` default to what the build says; `host:` overrides the EU address.
 
 ## The bucket helpers
 
@@ -103,7 +143,8 @@ Every app's privacy page carries this, with its name filled in:
 
 > \<App\> counts how it's used, so we can make it better. It doesn't know who
 > you are: no advertising ID, no account, nothing that follows you across
-> apps. You can turn the counting off in Settings.
+> apps. A random number on your phone lets it tell a return visit from a new
+> one. You can turn the counting off in Settings.
 
 ## Testing an app that uses it
 
@@ -114,17 +155,17 @@ final sink = FakeSink();
 Analytics.resetForTesting();
 Analytics.isDebug = false; // flutter test runs in debug, which sends nothing
 SharedPreferences.setMockInitialValues({});
-await Analytics.init(appKey: 'A-EU-0000000000', sink: sink);
+await Analytics.init(token: 'phc_test', app: 'even-split', sink: sink);
 // ... drive the app ...
 expect(sink.eventNames, ['first_run_started', 'first_run_finished']);
 ```
 
-Another SDK is one more `AnalyticsSink`; the rules, the switch and the
+Another service is one more `AnalyticsSink`; the rules, the switch and the
 first-run flags stay where they are.
 
 ## Developing
 
-The host has no Flutter; run everything in the studio's Flutter image:
+With the host's Flutter (`~/sdks/flutter`), or in the studio's Flutter image:
 
 ```sh
 docker run --rm --entrypoint sh -v "$PWD":/work -w /work \
