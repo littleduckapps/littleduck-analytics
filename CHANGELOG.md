@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-10-29
+
+- Rage-click capture is off. posthog_flutter turns it on by default on iPhone
+  and Mac, where rapid taps would have sent a `$rageclick` event the app never
+  asked for.
+
 ## 0.2.0 — 2026-10-27
 
 PostHog replaces Aptabase (Albert plan 43).

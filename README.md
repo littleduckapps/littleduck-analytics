@@ -17,7 +17,7 @@ version, the labels below, and a random install id the SDK keeps on the phone
 so a return visit counts as the same install. The install id is linked to no
 name, account, device id or advertising id, and no person profile is made.
 Everything else the SDK can capture by itself is off: session replay, screen
-views, app lifecycle events, exceptions, feature flags, surveys, push
+views, app lifecycle events, rage clicks (iPhone), exceptions, feature flags, surveys, push
 notifications.
 
 Every event carries three labels: `app` (the product key, e.g. `even-split`),

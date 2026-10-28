@@ -17,6 +17,7 @@ void main() {
       expect(config.surveys, isFalse);
       expect(config.capturePushNotificationSubscriptions, isFalse);
       expect(config.capturePushNotificationOpened, isFalse);
+      expect(config.rageClickConfig.enabled, isFalse);
     },
   );
 }

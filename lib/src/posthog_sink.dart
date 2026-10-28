@@ -12,7 +12,7 @@ import 'sink.dart';
 /// install. The install id is linked to no name, account, device id or
 /// advertising id. No person profiles are made, and every capture the SDK
 /// offers on its own is off: no session replay, no screen views, no app
-/// lifecycle events, no exceptions (a stack trace can carry what someone
+/// lifecycle events, no rage clicks (iPhone), no exceptions (a stack trace can carry what someone
 /// typed), no feature flags, no surveys, no push notifications. The app's
 /// own events, through `Analytics.track`, are all that is sent.
 class PostHogSink implements AnalyticsSink {
@@ -33,7 +33,8 @@ class PostHogSink implements AnalyticsSink {
         ..sendFeatureFlagEvent = false
         ..surveys = false
         ..capturePushNotificationSubscriptions = false
-        ..capturePushNotificationOpened = false;
+        ..capturePushNotificationOpened = false
+        ..rageClickConfig.enabled = false;
 
   @override
   Future<void> init(String token, {String? host}) =>
