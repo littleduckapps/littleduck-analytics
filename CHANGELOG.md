@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 — 2026-10-29
+
+- The UK no longer waits for a yes: `consentFirst('GB')` is false. Since
+  5 February 2026 the UK's law (the Data (Use and Access) Act 2025) lets an
+  app count how it is used to improve itself without asking first, as long
+  as it says so and gives an off switch. The EU and the EEA still ask first.
+
 ## 0.2.1 — 2026-10-29
 
 - Rage-click capture is off. posthog_flutter turns it on by default on iPhone

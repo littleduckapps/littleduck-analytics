@@ -1,6 +1,6 @@
 name: littleduck_analytics
 description: "Little Duck's one analytics door: anonymous usage counting through PostHog (EU), with the rules built in."
-version: 0.2.1
+version: 0.2.2
 publish_to: none
 
 environment:

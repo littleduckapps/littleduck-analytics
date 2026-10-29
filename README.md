@@ -26,10 +26,12 @@ epic's test build) and, in a test build, `build` (`LITTLEDUCK_BUILD`, e.g.
 `e2-58bb4fb`). The studio has one PostHog project for every app; the labels
 tell them apart, and `channel != qa` keeps test builds out of the real numbers.
 
-Storing an install id for counting needs consent in the EU, the EEA and the
-UK: there, counting starts off until the person says yes
+Storing an install id for counting needs consent in the EU and the EEA:
+there, counting starts off until the person says yes
 (`Analytics.consentFirst`). Elsewhere it starts on, with the off switch in
-Settings.
+Settings. That includes the UK, whose law since 5 February 2026 lets an app
+count how it is used to improve itself without asking first, as long as it
+says so and gives an off switch.
 
 ## The build
 
@@ -65,7 +67,7 @@ everything: `com.posthog.posthog.AUTO_INIT` `false` as `<meta-data>` in
 6. **Debug builds send nothing.** Whatever the switch says, a `kDebugMode`
    build never initialises the sink and never sends an event. Neither does a
    build without a token.
-7. **Consent first in the EU, EEA and UK.** Until the person answers, the
+7. **Consent first in the EU and EEA.** Until the person answers, the
    switch reads `whenUnset`; their answer is `setEnabled`.
 
 What happens to a call that breaks a rule: in a debug build it throws

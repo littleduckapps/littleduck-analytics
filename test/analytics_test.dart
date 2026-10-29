@@ -250,11 +250,11 @@ void main() {
   });
 
   group('consent first', () {
-    test('in the EU, the EEA and the UK, and where the country is unknown', () {
-      for (final country in ['DE', 'fr', 'IE', 'NO', 'GB', null, '']) {
+    test('in the EU and the EEA, and where the country is unknown', () {
+      for (final country in ['DE', 'fr', 'IE', 'NO', null, '']) {
         expect(Analytics.consentFirst(country), isTrue, reason: '$country');
       }
-      for (final country in ['AU', 'US', 'NZ', 'IN', 'CH']) {
+      for (final country in ['AU', 'US', 'NZ', 'IN', 'CH', 'GB', 'gb']) {
         expect(Analytics.consentFirst(country), isFalse, reason: country);
       }
     });

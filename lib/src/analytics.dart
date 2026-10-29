@@ -40,12 +40,15 @@ abstract final class Analytics {
     'LITTLEDUCK_BUILD',
   );
 
-  /// Countries where analytics waits for the person's yes: the EU, the EEA
-  /// and the UK (storing an install id for counting needs consent there).
+  /// Countries where analytics waits for the person's yes: the EU and the EEA
+  /// (storing an install id for counting needs consent there). Not the UK:
+  /// since 5 February 2026 its law lets an app count how it is used to
+  /// improve itself without asking first, if it says so and gives an off
+  /// switch.
   static const Set<String> consentFirstCountries = {
     'AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', //
     'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', //
-    'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB',
+    'SI', 'ES', 'SE', 'IS', 'LI', 'NO',
   };
 
   /// Whether counting starts off until the person says yes, for a phone set
